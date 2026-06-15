@@ -32,7 +32,7 @@
         </div>
         
         <div v-else-if="categories.length === 0" class="p-8 text-center text-slate-500">
-          Belum ada kategori.
+          Belum ada kategori
         </div>
         
         <table v-else class="w-full text-left border-collapse">
