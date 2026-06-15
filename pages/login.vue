@@ -114,15 +114,6 @@
         </button>
       </div>
 
-      <!-- Demo Account Instructions -->
-      <div class="mt-8 pt-5 border-t border-slate-900 text-center">
-        <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest block mb-2">Mode Demo Offline</span>
-        <div class="inline-flex flex-col sm:flex-row gap-1 bg-slate-950/60 border border-slate-900 rounded-xl px-4 py-2 text-[11px] text-slate-400 font-mono">
-          <span>User: <strong class="text-slate-200">kasir</strong></span>
-          <span class="hidden sm:inline text-slate-600">|</span>
-          <span>Pass: <strong class="text-slate-200">kasir123</strong></span>
-        </div>
-      </div>
     </div>
   </div>
 </template>

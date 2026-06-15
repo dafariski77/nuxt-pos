@@ -30,8 +30,7 @@ export const useAuthStore = defineStore('auth', {
       const isSupabaseConfigured = config.public.supabase?.url && config.public.supabase?.key
 
       if (!isSupabaseConfigured) {
-        this.isSupabaseAuth = false
-        this.loadLocalSession()
+        console.error('Supabase configuration is missing. Cannot initialize auth.')
         return
       }
 
@@ -74,8 +73,6 @@ export const useAuthStore = defineStore('auth', {
         }
       } catch (err: any) {
         console.error('Supabase auth initialization failed:', err)
-        this.loadLocalSession()
-        this.isSupabaseAuth = false
       } finally {
         this.loading = false
       }
@@ -101,34 +98,6 @@ export const useAuthStore = defineStore('auth', {
       this.error = ''
 
       try {
-        if (!this.isSupabaseAuth) {
-          // Local Demo Mode auth
-          await new Promise((resolve) => setTimeout(resolve, 800)) // simulated API delay
-          
-          // Check custom local users database
-          const localUsersRaw = localStorage.getItem('gravity_pos_users_db')
-          let localUsers: Record<string, string> = {
-            'kasir@gravity.pos': 'kasir123',
-            'kasir': 'kasir123'
-          }
-          if (localUsersRaw) {
-            try {
-              localUsers = { ...localUsers, ...JSON.parse(localUsersRaw) }
-            } catch (e) {}
-          }
-
-          if (localUsers[email] && localUsers[email] === pass) {
-            const sessionUser = { 
-              email: email.includes('@') ? email : `${email}@gravity.pos`,
-              storeName: 'Demo Store'
-            }
-            this.user = sessionUser
-            localStorage.setItem('gravity_pos_session', JSON.stringify(sessionUser))
-            return true
-          } else {
-            throw new Error('Email/Username atau password salah.')
-          }
-        }
 
         const supabase = useSupabaseClient()
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -161,53 +130,21 @@ export const useAuthStore = defineStore('auth', {
       this.error = ''
 
       try {
-        if (!this.isSupabaseAuth) {
-          // Local Demo Mode signup
-          await new Promise((resolve) => setTimeout(resolve, 800))
-          
-          const localUsersRaw = localStorage.getItem('gravity_pos_users_db')
-          let localUsers: Record<string, string> = {}
-          if (localUsersRaw) {
-            try {
-              localUsers = JSON.parse(localUsersRaw)
-            } catch (e) {}
-          }
-
-          if (localUsers[email] || email === 'kasir' || email === 'kasir@gravity.pos') {
-            throw new Error('Username / Email sudah terdaftar.')
-          }
-
-          localUsers[email] = pass
-          localStorage.setItem('gravity_pos_users_db', JSON.stringify(localUsers))
-          
-          // Auto login after signup in local mode
-          const sessionUser = { 
-            email: email.includes('@') ? email : `${email}@gravity.pos`,
-            storeName: storeName
-          }
-          this.user = sessionUser
-          localStorage.setItem('gravity_pos_session', JSON.stringify(sessionUser))
-          return true
-        }
 
         const supabase = useSupabaseClient<any>()
         const { data, error } = await supabase.auth.signUp({
           email,
-          password: pass
+          password: pass,
+          options: {
+            data: {
+              store_name: storeName
+            }
+          }
         })
 
         if (error) throw error
 
         if (data.user) {
-          // Create tenant and profile
-          const { error: rpcError } = await supabase.rpc('create_tenant', { store_name: storeName })
-          if (rpcError) {
-            console.error('Tenant creation error:', rpcError)
-            // If tenant creation fails, we might want to let the user know, but they are already signed up.
-            // Ideally we'd rollback auth, but Supabase doesn't support that easily.
-            throw new Error('Akun terdaftar, tetapi gagal membuat toko: ' + rpcError.message)
-          }
-
           this.user = { 
             email: data.user.email || '',
             storeName: storeName 
