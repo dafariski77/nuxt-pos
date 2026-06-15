@@ -43,9 +43,14 @@ export const useAuthStore = defineStore('auth', {
         if (session?.user) {
           this.user = {
             email: session.user.email || '',
+            role: undefined,
+            storeName: undefined
           }
           // Fetch tenant name and role
-          const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+          const { data, error } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+          if (error) {
+            console.error('Error fetching profile in initializeAuth:', error)
+          }
           if (data) {
             this.user.role = data.role
             if (data.tenants) {
@@ -62,8 +67,13 @@ export const useAuthStore = defineStore('auth', {
             if (session?.user) {
               this.user = {
                 email: session.user.email || '',
+                role: undefined,
+                storeName: undefined
               }
-              const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+              const { data, error } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+          if (error) {
+            console.error('Error fetching profile in initializeAuth:', error)
+          }
               if (data) {
                 this.user.role = data.role
                 if (data.tenants) {
@@ -112,7 +122,11 @@ export const useAuthStore = defineStore('auth', {
         if (error) throw error
 
         if (data.user) {
-          this.user = { email: data.user.email || '' }
+          this.user = { 
+            email: data.user.email || '',
+            role: undefined,
+            storeName: undefined
+          }
           // Fetch tenant name and role
           const { data: profile } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', data.user.id).single()
           if (profile) {

@@ -67,7 +67,7 @@
           <Transition name="slide-fade">
             <div v-if="sidebarOpen" class="overflow-hidden flex-grow min-w-0">
               <p class="text-xs font-bold text-slate-300 truncate">{{ authStore.user?.storeName || authStore.userEmail.split('@')[0] }}</p>
-              <p class="text-[10px] text-slate-500 truncate">{{ authStore.userEmail }}</p>
+              <p class="text-[10px] text-slate-500 truncate">{{ authStore.userEmail }} - Role: {{ authStore.user?.role || 'null' }}</p>
             </div>
           </Transition>
         </div>
