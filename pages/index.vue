@@ -22,15 +22,15 @@
         <!-- Category filter buttons -->
         <div class="flex items-center gap-1.5 bg-slate-900/50 border border-slate-800/80 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
           <button
-            v-for="cat in categories"
-            :key="cat"
-            @click="activeCategory = cat"
+            v-for="cat in [{id: 'Semua', name: 'Semua'}, ...categories]"
+            :key="cat.id"
+            @click="activeCategory = cat.id"
             class="px-4 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all duration-300"
-            :class="activeCategory === cat
+            :class="activeCategory === cat.id
               ? 'bg-brand-500 text-white shadow-md shadow-brand-500/15'
               : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'"
           >
-            {{ cat }}
+            {{ cat.name }}
           </button>
         </div>
       </div>
@@ -124,7 +124,7 @@ const showSuccessModal = ref(false)
 // Receipt Data for success modal
 const receiptData = ref({ amount: 0, time: '' })
 
-const categories = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan']
+const categories = ref<any[]>([])
 
 // Local dummy fallback products removed
 const mockProducts: Product[] = []
@@ -144,6 +144,12 @@ const fetchProducts = async () => {
     }
 
     const supabase = useSupabaseClient()
+    
+    // Fetch categories first
+    const { data: cats } = await supabase.from('categories').select('*')
+    if (cats) categories.value = cats
+
+    // Then fetch products
     const { data, error } = await supabase.from('products').select('*').order('name')
     if (error) throw error
 
@@ -158,7 +164,7 @@ const fetchProducts = async () => {
 const filteredProducts = computed(() =>
   products.value.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchCat = activeCategory.value === 'Semua' || p.category === activeCategory.value
+    const matchCat = activeCategory.value === 'Semua' || p.category_id === activeCategory.value
     return matchSearch && matchCat
   })
 )

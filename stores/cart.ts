@@ -5,7 +5,7 @@ export interface Product {
   id: string
   name: string
   price: number
-  category: string
+  category_id: string
   image_url?: string
   created_at?: string
 }

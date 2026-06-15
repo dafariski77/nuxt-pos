@@ -21,17 +21,9 @@
         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Produk</p>
         <p class="text-2xl font-black text-slate-100 mt-2">{{ products.length }}</p>
       </div>
-      <div class="glass-panel p-4 rounded-2xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Kopi</p>
-        <p class="text-2xl font-black text-slate-100 mt-2">{{ countByCategory('Kopi') }}</p>
-      </div>
-      <div class="glass-panel p-4 rounded-2xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Non-Kopi</p>
-        <p class="text-2xl font-black text-slate-100 mt-2">{{ countByCategory('Non-Kopi') }}</p>
-      </div>
-      <div class="glass-panel p-4 rounded-2xl">
-        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Makanan</p>
-        <p class="text-2xl font-black text-slate-100 mt-2">{{ countByCategory('Makanan') }}</p>
+      <div v-for="cat in categories.slice(0, 3)" :key="cat.id" class="glass-panel p-4 rounded-2xl">
+        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{{ cat.name }}</p>
+        <p class="text-2xl font-black text-slate-100 mt-2">{{ countByCategory(cat.id) }}</p>
       </div>
     </div>
 
@@ -52,15 +44,15 @@
       </div>
       <div class="flex items-center gap-1.5 bg-slate-900/50 border border-slate-800/80 p-1 rounded-xl w-full sm:w-auto overflow-x-auto">
         <button
-          v-for="cat in ['Semua', ...categories]"
-          :key="cat"
-          @click="activeCategory = cat"
+          v-for="cat in [{id: 'Semua', name: 'Semua'}, ...categories]"
+          :key="cat.id"
+          @click="activeCategory = cat.id"
           class="px-3 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all duration-200"
-          :class="activeCategory === cat
+          :class="activeCategory === cat.id
             ? 'bg-brand-500 text-white shadow-md shadow-brand-500/15'
             : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'"
         >
-          {{ cat }}
+          {{ cat.name }}
         </button>
       </div>
     </div>
@@ -117,7 +109,7 @@
                 </div>
               </td>
               <td class="p-4">
-                <span :class="categoryBadge(product.category)">{{ product.category }}</span>
+                <span :class="categoryBadge(product.category_id)">{{ getCategoryName(product.category_id) }}</span>
               </td>
               <td class="p-4 font-bold text-slate-200 text-sm">{{ formatRupiah(product.price) }}</td>
               <td class="p-4 pr-6">
@@ -176,9 +168,9 @@
             <div class="grid grid-cols-2 gap-4">
               <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1.5">Kategori <span class="text-red-400">*</span></label>
-                <select v-model="form.category" required class="form-input">
+                <select v-model="form.category_id" required class="form-input">
                   <option value="" disabled>Pilih kategori</option>
-                  <option v-for="cat in categories" :key="cat" :value="cat">{{ cat }}</option>
+                  <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
                 </select>
               </div>
               <div>
@@ -369,7 +361,7 @@ const showDeleteModal = ref(false)
 const isEditing = ref(false)
 const formError = ref('')
 const productToDelete = ref<Product | null>(null)
-const categories = ['Kopi', 'Non-Kopi', 'Makanan']
+const categories = ref<any[]>([])
 
 // Image upload state
 const fileInputRef = ref<HTMLInputElement | null>(null)
@@ -382,7 +374,7 @@ const fileSizeError = ref('')
 const form = reactive({
   id: '',
   name: '',
-  category: '',
+  category_id: '',
   price: 0,
   image_url: ''
 })
@@ -406,6 +398,12 @@ const fetchProducts = async () => {
     const config = useRuntimeConfig()
     if (config.public.supabase?.url && config.public.supabase?.key) {
       supabase = useSupabaseClient()
+      
+      // Fetch categories first
+      const { data: cats } = await supabase.from('categories').select('*')
+      if (cats) categories.value = cats
+
+      // Then fetch products
       const { data, error } = await supabase.from('products').select('*').order('name')
       if (error) throw error
       products.value = data || []
@@ -429,25 +427,22 @@ onMounted(fetchProducts)
 const filteredProducts = computed(() =>
   products.value.filter(p => {
     const matchSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchCat = activeCategory.value === 'Semua' || p.category === activeCategory.value
+    const matchCat = activeCategory.value === 'Semua' || p.category_id === activeCategory.value
     return matchSearch && matchCat
   })
 )
 
-const countByCategory = (cat: string) => products.value.filter(p => p.category === cat).length
+const countByCategory = (catId: string) => products.value.filter(p => p.category_id === catId).length
+const getCategoryName = (catId: string) => categories.value.find(c => c.id === catId)?.name || 'Unknown'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatRupiah = (v: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v)
 
-const categoryBadge = (cat: string) => {
-  const map: Record<string, string> = {
-    'Kopi': 'px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20',
-    'Non-Kopi': 'px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
-    'Makanan': 'px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-sky-500/10 text-sky-400 border border-sky-500/20',
-  }
-  return map[cat] || 'px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20'
+const categoryBadge = (catId: string) => {
+  // We can just return a default badge since colors are dynamic or unknown
+  return 'px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-slate-500/10 text-slate-400 border border-slate-500/20'
 }
 
 const showToast = (message: string, type: 'success' | 'error' = 'success') => {
@@ -546,7 +541,7 @@ const resetImageState = () => {
 
 const openAddModal = () => {
   isEditing.value = false
-  Object.assign(form, { id: '', name: '', category: '', price: 0, image_url: '' })
+  Object.assign(form, { id: '', name: '', category_id: '', price: 0, image_url: '' })
   formError.value = ''
   resetImageState()
   showModal.value = true
@@ -557,7 +552,7 @@ const openEditModal = (product: Product) => {
   Object.assign(form, {
     id: product.id,
     name: product.name,
-    category: product.category,
+    category_id: product.category_id,
     price: product.price,
     image_url: product.image_url || ''
   })
@@ -592,7 +587,7 @@ const saveProduct = async () => {
 
     const payload = {
       name: form.name,
-      category: form.category,
+      category_id: form.category_id,
       price: form.price,
       image_url: finalImageUrl
     }

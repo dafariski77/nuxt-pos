@@ -44,11 +44,14 @@ export const useAuthStore = defineStore('auth', {
           this.user = {
             email: session.user.email || '',
           }
-          // Fetch tenant name only on client to avoid SSR context loss
+          // Fetch tenant name and role only on client to avoid SSR context loss
           if (typeof window !== 'undefined') {
-            const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
-            if (data && data.tenants) {
-              this.user.storeName = (data.tenants as any).name
+            const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+            if (data) {
+              this.user.role = data.role
+              if (data.tenants) {
+                this.user.storeName = (data.tenants as any).name
+              }
             }
           }
         } else {
@@ -62,9 +65,12 @@ export const useAuthStore = defineStore('auth', {
               this.user = {
                 email: session.user.email || '',
               }
-              const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
-              if (data && data.tenants) {
-                this.user.storeName = (data.tenants as any).name
+              const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+              if (data) {
+                this.user.role = data.role
+                if (data.tenants) {
+                  this.user.storeName = (data.tenants as any).name
+                }
               }
             } else {
               this.user = null
@@ -109,10 +115,13 @@ export const useAuthStore = defineStore('auth', {
 
         if (data.user) {
           this.user = { email: data.user.email || '' }
-          // Fetch tenant name
-          const { data: profile } = await supabase.from('profiles').select('tenants(name)').eq('user_id', data.user.id).single()
-          if (profile && profile.tenants) {
-            this.user.storeName = (profile.tenants as any).name
+          // Fetch tenant name and role
+          const { data: profile } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', data.user.id).single()
+          if (profile) {
+            this.user.role = profile.role
+            if (profile.tenants) {
+              this.user.storeName = (profile.tenants as any).name
+            }
           }
           return true
         }
