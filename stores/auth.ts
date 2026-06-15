@@ -54,20 +54,22 @@ export const useAuthStore = defineStore('auth', {
           this.user = null
         }
 
-        // Subscribe to auth updates
-        supabase.auth.onAuthStateChange(async (event, session) => {
-          if (session?.user) {
-            this.user = {
-              email: session.user.email || '',
+        // Subscribe to auth updates only on client
+        if (typeof window !== 'undefined') {
+          supabase.auth.onAuthStateChange(async (event, session) => {
+            if (session?.user) {
+              this.user = {
+                email: session.user.email || '',
+              }
+              const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
+              if (data && data.tenants) {
+                this.user.storeName = (data.tenants as any).name
+              }
+            } else {
+              this.user = null
             }
-            const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
-            if (data && data.tenants) {
-              this.user.storeName = (data.tenants as any).name
-            }
-          } else {
-            this.user = null
-          }
-        })
+          })
+        }
       } catch (err: any) {
         console.error('Supabase auth initialization failed:', err)
         this.loadLocalSession()
