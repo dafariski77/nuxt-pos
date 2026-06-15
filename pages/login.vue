@@ -35,6 +35,25 @@
 
       <!-- Form -->
       <form @submit.prevent="handleSubmit" class="space-y-4">
+        <!-- Store Name input (Only for Sign Up) -->
+        <div v-if="isSignUpMode" class="space-y-1.5 transition-all duration-300">
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Nama Toko</label>
+          <div class="relative group">
+            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-brand-400 transition-colors">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a.75.75 0 0 1 .75-.75h3a.75.75 0 0 1 .75.75V21m-4.5 0H2.36m11.14 0H18m0 0h3.64m-1.39 0V9.349M3.75 21V9.349m0 0a3.001 3.001 0 0 0 3.75-.615A2.993 2.993 0 0 0 9.75 9.75c.896 0 1.7-.393 2.25-1.016a2.993 2.993 0 0 0 2.25 1.016c.896 0 1.7-.393 2.25-1.015a3.001 3.001 0 0 0 3.75.614m-16.5 0a3.004 3.004 0 0 1-.621-4.72l1.189-1.19A1.5 1.5 0 0 1 5.378 3h13.243a1.5 1.5 0 0 1 1.06.44l1.19 1.189a3 3 0 0 1-.621 4.72M6.75 18h3.75a.75.75 0 0 0 .75-.75v-3.5a.75.75 0 0 0-.75-.75H6.75a.75.75 0 0 0-.75.75v3.5a.75.75 0 0 0 .75.75Z" />
+              </svg>
+            </span>
+            <input
+              v-model="storeName"
+              type="text"
+              :required="isSignUpMode"
+              placeholder="Contoh: Kopi Senja"
+              class="w-full pl-10 pr-4 py-3 bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-xl text-sm text-slate-100 placeholder-slate-600 focus:outline-none focus:ring-1 focus:ring-brand-500/30 transition-all duration-300"
+            />
+          </div>
+        </div>
+
         <!-- Username/Email input -->
         <div class="space-y-1.5">
           <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Username atau Email</label>
@@ -117,6 +136,7 @@ definePageMeta({ layout: false })
 const authStore = useAuthStore()
 
 // State
+const storeName = ref('')
 const email = ref('')
 const password = ref('')
 const isSignUpMode = ref(false)
@@ -146,7 +166,12 @@ const handleSubmit = async () => {
       triggerShake()
       return
     }
-    success = await authStore.signUp(email.value, password.value)
+    if (!storeName.value.trim()) {
+      errorMessage.value = 'Nama toko wajib diisi.'
+      triggerShake()
+      return
+    }
+    success = await authStore.signUp(email.value, password.value, storeName.value)
   } else {
     success = await authStore.login(email.value, password.value)
   }

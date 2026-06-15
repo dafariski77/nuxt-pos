@@ -1,6 +1,9 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  devServer: {
+    port: 3001
+  },
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
   modules: [
@@ -9,7 +12,12 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase'
   ],
   supabase: {
-    redirect: false
+    redirectOptions: {
+      login: '/login',
+      callback: '/confirm',
+      include: ['/*'],
+      exclude: ['/login', '/register'],
+    }
   },
   app: {
     head: {

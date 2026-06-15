@@ -15,7 +15,7 @@
         <Transition name="slide-fade">
           <div v-if="sidebarOpen" class="overflow-hidden whitespace-nowrap">
             <h1 class="text-[14px] font-black tracking-tight text-slate-100 flex items-center gap-1.5 leading-none">
-              GravityPOS
+              {{ authStore.user?.storeName || 'GravityPOS' }}
               <span class="text-[9px] font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/20">MVP</span>
             </h1>
             <p class="text-[10px] text-slate-400 mt-0.5 font-medium">Point of Sale</p>
@@ -66,7 +66,7 @@
           </div>
           <Transition name="slide-fade">
             <div v-if="sidebarOpen" class="overflow-hidden flex-grow min-w-0">
-              <p class="text-xs font-bold text-slate-300 truncate">{{ authStore.userEmail.split('@')[0] }}</p>
+              <p class="text-xs font-bold text-slate-300 truncate">{{ authStore.user?.storeName || authStore.userEmail.split('@')[0] }}</p>
               <p class="text-[10px] text-slate-500 truncate">{{ authStore.userEmail }}</p>
             </div>
           </Transition>

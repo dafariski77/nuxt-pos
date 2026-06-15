@@ -29,11 +29,11 @@ COPY --from=build /app/.output ./.output
 
 # Konfigurasi environment variables yang direkomendasikan Nuxt
 ENV HOST=0.0.0.0
-ENV PORT=3000
+ENV PORT=3001
 ENV NODE_ENV=production
 
 # Expose port yang digunakan
-EXPOSE 3000
+EXPOSE 3001
 
 # Jalankan server
 CMD ["node", ".output/server/index.mjs"]

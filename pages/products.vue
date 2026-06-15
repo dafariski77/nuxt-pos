@@ -398,18 +398,7 @@ const toast = reactive({
 let supabase: any = null
 let isSupabaseReady = false
 
-const mockProducts: Product[] = [
-  { id: '1', name: 'Kopi Susu Aren', price: 18000, category: 'Kopi', image_url: '/images/kopi_susu.png' },
-  { id: '2', name: 'Espresso', price: 15000, category: 'Kopi', image_url: '/images/espresso.png' },
-  { id: '3', name: 'Caramel Latte', price: 24000, category: 'Kopi', image_url: '/images/caramel_latte.png' },
-  { id: '4', name: 'Americano', price: 18000, category: 'Kopi', image_url: '/images/americano.png' },
-  { id: '5', name: 'Iced Matcha Latte', price: 22000, category: 'Non-Kopi', image_url: '/images/matcha_latte.png' },
-  { id: '6', name: 'Red Velvet Latte', price: 22000, category: 'Non-Kopi', image_url: '/images/red_velvet.png' },
-  { id: '7', name: 'Chocolate Signature', price: 20000, category: 'Non-Kopi', image_url: '/images/chocolate.png' },
-  { id: '8', name: 'Butter Croissant', price: 18000, category: 'Makanan', image_url: '/images/croissant.png' },
-  { id: '9', name: 'Almond Croissant', price: 25000, category: 'Makanan', image_url: '/images/almond_croissant.png' },
-  { id: '10', name: 'Fudge Brownie', price: 15000, category: 'Makanan', image_url: '/images/brownie.png' },
-]
+const mockProducts: Product[] = []
 
 const fetchProducts = async () => {
   loading.value = true
@@ -419,14 +408,14 @@ const fetchProducts = async () => {
       supabase = useSupabaseClient()
       const { data, error } = await supabase.from('products').select('*').order('name')
       if (error) throw error
-      products.value = data?.length ? data : [...mockProducts]
+      products.value = data || []
       isSupabaseReady = true
     } else {
-      products.value = [...mockProducts]
+      products.value = []
       isSupabaseReady = false
     }
   } catch {
-    products.value = [...mockProducts]
+    products.value = []
     isSupabaseReady = false
   } finally {
     loading.value = false

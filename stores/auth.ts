@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
+import { useCartStore } from './cart'
 
 export interface UserSession {
   email: string
   role?: string
+  storeName?: string
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -43,15 +45,24 @@ export const useAuthStore = defineStore('auth', {
           this.user = {
             email: session.user.email || '',
           }
+          // Fetch tenant name
+          const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
+          if (data && data.tenants) {
+            this.user.storeName = (data.tenants as any).name
+          }
         } else {
           this.user = null
         }
 
         // Subscribe to auth updates
-        supabase.auth.onAuthStateChange((event, session) => {
+        supabase.auth.onAuthStateChange(async (event, session) => {
           if (session?.user) {
             this.user = {
               email: session.user.email || '',
+            }
+            const { data } = await supabase.from('profiles').select('tenants(name)').eq('user_id', session.user.id).single()
+            if (data && data.tenants) {
+              this.user.storeName = (data.tenants as any).name
             }
           } else {
             this.user = null
@@ -103,7 +114,10 @@ export const useAuthStore = defineStore('auth', {
           }
 
           if (localUsers[email] && localUsers[email] === pass) {
-            const sessionUser = { email: email.includes('@') ? email : `${email}@gravity.pos` }
+            const sessionUser = { 
+              email: email.includes('@') ? email : `${email}@gravity.pos`,
+              storeName: 'Demo Store'
+            }
             this.user = sessionUser
             localStorage.setItem('gravity_pos_session', JSON.stringify(sessionUser))
             return true
@@ -122,6 +136,11 @@ export const useAuthStore = defineStore('auth', {
 
         if (data.user) {
           this.user = { email: data.user.email || '' }
+          // Fetch tenant name
+          const { data: profile } = await supabase.from('profiles').select('tenants(name)').eq('user_id', data.user.id).single()
+          if (profile && profile.tenants) {
+            this.user.storeName = (profile.tenants as any).name
+          }
           return true
         }
       } catch (err: any) {
@@ -133,7 +152,7 @@ export const useAuthStore = defineStore('auth', {
       }
     },
 
-    async signUp(email: string, pass: string) {
+    async signUp(email: string, pass: string, storeName: string = 'Demo Store') {
       this.loading = true
       this.error = ''
 
@@ -158,13 +177,16 @@ export const useAuthStore = defineStore('auth', {
           localStorage.setItem('gravity_pos_users_db', JSON.stringify(localUsers))
           
           // Auto login after signup in local mode
-          const sessionUser = { email: email.includes('@') ? email : `${email}@gravity.pos` }
+          const sessionUser = { 
+            email: email.includes('@') ? email : `${email}@gravity.pos`,
+            storeName: storeName
+          }
           this.user = sessionUser
           localStorage.setItem('gravity_pos_session', JSON.stringify(sessionUser))
           return true
         }
 
-        const supabase = useSupabaseClient()
+        const supabase = useSupabaseClient<any>()
         const { data, error } = await supabase.auth.signUp({
           email,
           password: pass
@@ -173,7 +195,19 @@ export const useAuthStore = defineStore('auth', {
         if (error) throw error
 
         if (data.user) {
-          this.user = { email: data.user.email || '' }
+          // Create tenant and profile
+          const { error: rpcError } = await supabase.rpc('create_tenant', { store_name: storeName })
+          if (rpcError) {
+            console.error('Tenant creation error:', rpcError)
+            // If tenant creation fails, we might want to let the user know, but they are already signed up.
+            // Ideally we'd rollback auth, but Supabase doesn't support that easily.
+            throw new Error('Akun terdaftar, tetapi gagal membuat toko: ' + rpcError.message)
+          }
+
+          this.user = { 
+            email: data.user.email || '',
+            storeName: storeName 
+          }
           return true
         }
       } catch (err: any) {
@@ -199,6 +233,11 @@ export const useAuthStore = defineStore('auth', {
         if (typeof window !== 'undefined') {
           localStorage.removeItem('gravity_pos_session')
         }
+        
+        // Clear cart data
+        const cartStore = useCartStore()
+        cartStore.clearCart()
+        
         this.loading = false
       }
     }
