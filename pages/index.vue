@@ -1,138 +1,68 @@
 <template>
-  <div class="flex-grow flex flex-col min-h-screen">
-    <!-- Header -->
-    <header class="glass-panel border-t-0 border-x-0 rounded-none px-6 py-4 flex items-center justify-between sticky top-0 z-20">
-      <div class="flex items-center gap-3">
-        <!-- Logo Icon -->
-        <div class="w-10 h-10 bg-brand-500 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/20 text-white font-black text-xl tracking-tighter">
-          G
+  <div class="flex h-[calc(100vh-65px)] overflow-hidden">
+    <!-- Left: Catalog & Search -->
+    <section class="flex-grow flex flex-col h-full overflow-hidden p-6">
+      <!-- Search and Filters Bar -->
+      <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-5">
+        <!-- Search input -->
+        <div class="relative w-full md:max-w-xs group">
+          <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-brand-400 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
+            </svg>
+          </span>
+          <input
+            v-model="searchQuery"
+            type="text"
+            placeholder="Cari nama menu..."
+            class="w-full pl-10 pr-4 py-2.5 bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 transition-all duration-300"
+          />
         </div>
-        <div>
-          <h1 class="text-[16px] font-black tracking-tight text-slate-100 flex items-center gap-1.5 leading-none">
-            GravityPOS <span class="text-[10px] font-bold text-brand-400 bg-brand-500/10 px-1.5 py-0.5 rounded-md border border-brand-500/20">MVP</span>
-          </h1>
-          <p class="text-[11px] text-slate-400 mt-1 font-medium">{{ currentTimeString }}</p>
+
+        <!-- Category filter buttons -->
+        <div class="flex items-center gap-1.5 bg-slate-900/50 border border-slate-800/80 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
+          <button
+            v-for="cat in categories"
+            :key="cat"
+            @click="activeCategory = cat"
+            class="px-4 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all duration-300"
+            :class="activeCategory === cat
+              ? 'bg-brand-500 text-white shadow-md shadow-brand-500/15'
+              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'"
+          >
+            {{ cat }}
+          </button>
         </div>
       </div>
 
-      <!-- Navigation Menu -->
-      <nav class="flex items-center gap-1 bg-slate-900/50 border border-slate-800/80 p-1 rounded-xl">
-        <NuxtLink
-          to="/"
-          class="px-4 py-1.5 text-xs font-bold rounded-lg bg-slate-800 text-brand-400 border border-slate-700/50"
-        >
-          Katalog Kasir
-        </NuxtLink>
-        <NuxtLink
-          to="/reports"
-          class="px-4 py-1.5 text-xs font-bold rounded-lg text-slate-400 hover:text-slate-200 transition-all"
-        >
-          Laporan Penjualan
-        </NuxtLink>
-      </nav>
-
-      <!-- Cashier info & Logout -->
-      <div class="flex items-center gap-4">
-        <!-- Connection Status indicator -->
-        <div class="hidden md:flex items-center gap-2">
-          <span
-            class="w-2.5 h-2.5 rounded-full animate-pulse"
-            :class="isSupabaseConnected ? 'bg-emerald-500 shadow-[0_0_10px_#10b981]' : 'bg-amber-500 shadow-[0_0_10px_#f59e0b]'"
-          ></span>
-          <span class="text-[11px] font-semibold text-slate-400">
-            {{ isSupabaseConnected ? 'Supabase' : 'Offline' }}
-          </span>
-        </div>
-
-        <!-- Cashier name & icon -->
-        <div class="flex items-center gap-2 bg-slate-900/60 border border-slate-800/80 px-3 py-1.5 rounded-xl">
-          <div class="w-5 h-5 rounded-full bg-brand-500/20 text-brand-400 flex items-center justify-center text-[10px] font-black uppercase">
-            {{ authStore.userEmail.charAt(0) }}
-          </div>
-          <span class="text-xs font-bold text-slate-300 max-w-[90px] truncate">
-            {{ authStore.userEmail.split('@')[0] }}
-          </span>
-        </div>
-
-        <!-- Logout button -->
-        <button
-          @click="handleLogout"
-          class="w-8 h-8 rounded-lg bg-slate-900 hover:bg-red-500/10 text-slate-400 hover:text-red-400 border border-slate-800 hover:border-red-500/20 flex items-center justify-center transition-all active:scale-95"
-          title="Keluar"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0 0 13.5 3h-6a2.25 2.25 0 0 0-2.25 2.25v13.5A2.25 2.25 0 0 0 7.5 21h6a2.25 2.25 0 0 0 2.25-2.25V15M12 9l-3 3m0 0 3 3m-3-3h12.75" />
-          </svg>
-        </button>
+      <!-- Products Loading State -->
+      <div v-if="productsLoading" class="flex-grow flex flex-col items-center justify-center">
+        <span class="w-10 h-10 border-3 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></span>
+        <span class="text-sm font-semibold text-slate-400 mt-4">Memuat katalog produk...</span>
       </div>
-    </header>
 
-    <!-- Main Content Area -->
-    <main class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 overflow-hidden max-h-[calc(100vh-73px)]">
-      <!-- Left: Catalog & Search (8 cols) -->
-      <section class="lg:col-span-8 flex flex-col h-full overflow-hidden">
-        <!-- Search and Filters Bar -->
-        <div class="flex flex-col md:flex-row gap-4 items-center justify-between mb-5">
-          <!-- Search input -->
-          <div class="relative w-full md:max-w-xs group">
-            <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500 group-focus-within:text-brand-400 transition-colors">
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
-                <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.602 10.602Z" />
-              </svg>
-            </span>
-            <input
-              v-model="searchQuery"
-              type="text"
-              placeholder="Cari nama menu..."
-              class="w-full pl-10 pr-4 py-2.5 bg-slate-900/60 border border-slate-800 focus:border-brand-500 rounded-xl text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-brand-500/30 transition-all duration-300"
-            />
-          </div>
-
-          <!-- Category filter buttons -->
-          <div class="flex items-center gap-1.5 bg-slate-900/50 border border-slate-800/80 p-1 rounded-xl w-full md:w-auto overflow-x-auto">
-            <button
-              v-for="cat in categories"
-              :key="cat"
-              @click="activeCategory = cat"
-              class="px-4 py-1.5 text-xs font-semibold rounded-lg whitespace-nowrap transition-all duration-300"
-              :class="activeCategory === cat 
-                ? 'bg-brand-500 text-white shadow-md shadow-brand-500/15' 
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'"
-            >
-              {{ cat }}
-            </button>
-          </div>
+      <!-- Catalog Grid -->
+      <div v-else class="flex-grow overflow-y-auto pr-1 pb-4">
+        <div v-if="filteredProducts.length === 0" class="flex flex-col items-center justify-center text-center p-12 h-64">
+          <p class="text-slate-400 font-semibold">Menu tidak ditemukan</p>
+          <p class="text-xs text-slate-500 mt-1">Coba gunakan kata kunci pencarian yang berbeda</p>
         </div>
-
-        <!-- Products Loading State -->
-        <div v-if="productsLoading" class="flex-grow flex flex-col items-center justify-center">
-          <span class="w-10 h-10 border-3 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></span>
-          <span class="text-sm font-semibold text-slate-400 mt-4">Memuat katalog produk...</span>
+        <div v-else class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
+          <ProductCard
+            v-for="prod in filteredProducts"
+            :key="prod.id"
+            :product="prod"
+            @add-to-cart="cartStore.addToCart"
+            class="animate-[fadeIn_0.3s_ease-out]"
+          />
         </div>
+      </div>
+    </section>
 
-        <!-- Catalog Grid -->
-        <div v-else class="flex-grow overflow-y-auto pr-1 pb-4">
-          <div v-if="filteredProducts.length === 0" class="flex flex-col items-center justify-center text-center p-12 h-64">
-            <p class="text-slate-400 font-semibold">Menu tidak ditemukan</p>
-            <p class="text-xs text-slate-500 mt-1">Coba gunakan kata kunci pencarian yang berbeda</p>
-          </div>
-          <div v-else class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-4">
-            <ProductCard
-              v-for="prod in filteredProducts"
-              :key="prod.id"
-              :product="prod"
-              @add-to-cart="cartStore.addToCart"
-              class="animate-[fadeIn_0.3s_ease-out]"
-            />
-          </div>
-        </div>
-      </section>
-
-      <!-- Right: Cart panel (4 cols) -->
-      <section class="lg:col-span-4 h-full overflow-hidden">
-        <CartSidebar @checkout-completed="handleCheckoutSuccess" />
-      </section>
-    </main>
+    <!-- Right: Cart sidebar -->
+    <section class="w-[340px] xl:w-[380px] flex-shrink-0 h-full overflow-hidden border-l border-slate-800/60">
+      <CartSidebar @checkout-completed="handleCheckoutSuccess" />
+    </section>
 
     <!-- Success Modal Overlay -->
     <Transition name="fade">
@@ -178,37 +108,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useCartStore } from '~/stores/cart'
-import { useAuthStore } from '~/stores/auth'
 import type { Product } from '~/stores/cart'
 
 const cartStore = useCartStore()
-const authStore = useAuthStore()
-
-const handleLogout = async () => {
-  await authStore.logout()
-  navigateTo('/login')
-}
 
 // State
 const products = ref<Product[]>([])
 const productsLoading = ref(true)
-const isSupabaseConnected = ref(false)
 const searchQuery = ref('')
 const activeCategory = ref('Semua')
 const showSuccessModal = ref(false)
-const currentTime = ref(new Date())
 
 // Receipt Data for success modal
-const receiptData = ref({
-  amount: 0,
-  time: ''
-})
+const receiptData = ref({ amount: 0, time: '' })
 
 const categories = ['Semua', 'Kopi', 'Non-Kopi', 'Makanan']
 
-// Local dummy fallback products (in case Supabase is offline or unconfigured)
+// Local dummy fallback products
 const mockProducts: Product[] = [
   { id: '1', name: 'Kopi Susu Aren', price: 18000, category: 'Kopi', image_url: '/images/kopi_susu.png' },
   { id: '2', name: 'Espresso', price: 15000, category: 'Kopi', image_url: '/images/espresso.png' },
@@ -222,94 +140,48 @@ const mockProducts: Product[] = [
   { id: '10', name: 'Fudge Brownie', price: 15000, category: 'Makanan', image_url: '/images/brownie.png' },
 ]
 
-// Current time updates
-let timer: ReturnType<typeof setInterval>
-onMounted(() => {
-  timer = setInterval(() => {
-    currentTime.value = new Date()
-  }, 1000)
-  
-  fetchProducts()
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
-})
-
-const currentTimeString = computed(() => {
-  return new Intl.DateTimeFormat('id-ID', {
-    dateStyle: 'full',
-    timeStyle: 'medium'
-  }).format(currentTime.value)
-})
+onMounted(() => { fetchProducts() })
 
 // Fetch products from database
 const fetchProducts = async () => {
   productsLoading.value = true
-  
   try {
     const config = useRuntimeConfig()
     const isSupabaseConfigured = config.public.supabase?.url && config.public.supabase?.key
 
     if (!isSupabaseConfigured) {
-      console.warn('Supabase keys are missing. Loading local demo catalog products.')
       products.value = mockProducts
-      isSupabaseConnected.value = false
       return
     }
 
     const supabase = useSupabaseClient()
-    const { data, error } = await supabase
-      .from('products')
-      .select('*')
-      .order('name')
-
+    const { data, error } = await supabase.from('products').select('*').order('name')
     if (error) throw error
 
-    if (data && data.length > 0) {
-      products.value = data
-      isSupabaseConnected.value = true
-    } else {
-      console.log('No products found in DB. Falling back to local catalog.')
-      products.value = mockProducts
-      isSupabaseConnected.value = true
-    }
-  } catch (error) {
-    console.error('Failed to fetch from Supabase. Falling back to mock data:', error)
+    products.value = (data && data.length > 0) ? data : mockProducts
+  } catch {
     products.value = mockProducts
-    isSupabaseConnected.value = false
   } finally {
     productsLoading.value = false
   }
 }
 
-// Filters logic
-const filteredProducts = computed(() => {
-  return products.value.filter((product) => {
-    const matchesSearch = product.name.toLowerCase().includes(searchQuery.value.toLowerCase())
-    const matchesCategory = activeCategory.value === 'Semua' || product.category === activeCategory.value
-    return matchesSearch && matchesCategory
+const filteredProducts = computed(() =>
+  products.value.filter(p => {
+    const matchSearch = p.name.toLowerCase().includes(searchQuery.value.toLowerCase())
+    const matchCat = activeCategory.value === 'Semua' || p.category === activeCategory.value
+    return matchSearch && matchCat
   })
-})
+)
 
-// Formatting money to IDR
-const formatRupiah = (value: number) => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0
-  }).format(value)
-}
+const formatRupiah = (v: number) =>
+  new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v)
 
-// Success Checkout handler
 const handleCheckoutSuccess = () => {
   const tax = Math.round(cartStore.totalAmount * 0.1)
   receiptData.value = {
     amount: cartStore.totalAmount + tax,
-    time: new Intl.DateTimeFormat('id-ID', {
-      dateStyle: 'short',
-      timeStyle: 'medium'
-    }).format(new Date())
+    time: new Intl.DateTimeFormat('id-ID', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date())
   }
   showSuccessModal.value = true
 }
@@ -322,34 +194,15 @@ const closeSuccessModal = () => {
 
 <style scoped>
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes scaleUp {
-  from {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
+  from { opacity: 0; transform: scale(0.95); }
+  to   { opacity: 1; transform: scale(1); }
 }
 
-.fade-enter-active,
-.fade-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.fade-enter-from,
-.fade-leave-to {
-  opacity: 0;
-}
+.fade-enter-active, .fade-leave-active { transition: opacity 0.2s ease; }
+.fade-enter-from, .fade-leave-to { opacity: 0; }
 </style>

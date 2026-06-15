@@ -1,0 +1,12 @@
+node_modules
+.output
+.nuxt
+.data
+.env
+.DS_Store
+dist
+*.log
+README.md
+implementation-step.md
+prd.md
+schema.sql
