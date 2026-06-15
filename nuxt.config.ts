@@ -1,6 +1,15 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 export default defineNuxtConfig({
   compatibilityDate: '2024-11-01',
+  ssr: false, // Make the app entirely client-side (SPA)
+  runtimeConfig: {
+    public: {
+      supabase: {
+        url: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
+        key: process.env.NUXT_PUBLIC_SUPABASE_KEY || ''
+      }
+    }
+  },
   devServer: {
     port: 3001
   },
