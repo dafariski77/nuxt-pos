@@ -107,7 +107,7 @@
           <div class="space-y-1.5">
             <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Role</label>
             <select v-model="form.role" class="w-full px-4 py-3 bg-slate-950 border border-slate-800 focus:border-brand-500 rounded-xl text-sm text-slate-100 focus:outline-none transition-colors appearance-none">
-              <option value="kasir">Kasir</option>
+              <option value="employee">Employee</option>
               <option value="admin">Admin</option>
             </select>
           </div>
@@ -144,7 +144,7 @@ const formError = ref('')
 const form = ref({
   email: '',
   password: '',
-  role: 'kasir'
+  role: 'employee'
 })
 
 const isOwner = computed(() => currentUserRole.value === 'owner')
@@ -197,7 +197,7 @@ const createUser = async () => {
     await fetchUsers()
     
     // Reset and close
-    form.value = { email: '', password: '', role: 'kasir' }
+    form.value = { email: '', password: '', role: 'employee' }
     showAddModal.value = false
     
   } catch (err: any) {

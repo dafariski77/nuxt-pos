@@ -35,7 +35,7 @@ export default defineEventHandler(async (event) => {
     email_confirm: true,
     user_metadata: {
       tenant_id: tenantId,
-      role: role || 'kasir'
+      role: role || 'employee'
     }
   })
 

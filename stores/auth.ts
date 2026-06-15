@@ -44,14 +44,12 @@ export const useAuthStore = defineStore('auth', {
           this.user = {
             email: session.user.email || '',
           }
-          // Fetch tenant name and role only on client to avoid SSR context loss
-          if (typeof window !== 'undefined') {
-            const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
-            if (data) {
-              this.user.role = data.role
-              if (data.tenants) {
-                this.user.storeName = (data.tenants as any).name
-              }
+          // Fetch tenant name and role
+          const { data } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+          if (data) {
+            this.user.role = data.role
+            if (data.tenants) {
+              this.user.storeName = (data.tenants as any).name
             }
           }
         } else {
