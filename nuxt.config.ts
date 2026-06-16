@@ -5,7 +5,10 @@ export default defineNuxtConfig({
     '/**': { ssr: false }
   },
   runtimeConfig: {
-    supabaseServiceKey: process.env.SUPABASE_SERVICE_KEY || '',
+    supabase: {
+      serviceKey: process.env.SUPABASE_SERVICE_KEY || '',
+      secretKey: process.env.SUPABASE_SERVICE_KEY || ''
+    },
     public: {
       supabase: {
         url: process.env.NUXT_PUBLIC_SUPABASE_URL || '',
