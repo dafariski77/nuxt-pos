@@ -1,5 +1,5 @@
 # Menggunakan multi-stage build untuk memperkecil ukuran image akhir
-FROM node:lts-alpine as build
+FROM node:24-alpine as build
 
 # Set direktori kerja
 WORKDIR /app
