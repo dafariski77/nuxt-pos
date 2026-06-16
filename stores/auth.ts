@@ -46,15 +46,19 @@ export const useAuthStore = defineStore('auth', {
             role: undefined,
             storeName: undefined
           }
-          // Fetch tenant name and role
-          const { data, error } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+          // Fetch role first without JOIN
+          const { data, error } = await supabase.from('profiles').select('role, tenant_id').eq('user_id', session.user.id).single()
           if (error) {
             console.error('Error fetching profile in initializeAuth:', error)
           }
           if (data) {
             this.user.role = data.role
-            if (data.tenants) {
-              this.user.storeName = (data.tenants as any).name
+            if (data.tenant_id) {
+              // Fetch tenant separately
+              const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', data.tenant_id).single()
+              if (tenantData) {
+                this.user.storeName = tenantData.name
+              }
             }
           }
         } else {
@@ -65,19 +69,26 @@ export const useAuthStore = defineStore('auth', {
         if (typeof window !== 'undefined') {
           supabase.auth.onAuthStateChange(async (event, session) => {
             if (session?.user) {
-              this.user = {
-                email: session.user.email || '',
-                role: undefined,
-                storeName: undefined
+              if (!this.user) {
+                this.user = {
+                  email: session.user.email || '',
+                  role: undefined,
+                  storeName: undefined
+                }
+              } else {
+                this.user.email = session.user.email || ''
               }
-              const { data, error } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', session.user.id).single()
+              const { data, error } = await supabase.from('profiles').select('role, tenant_id').eq('user_id', session.user.id).single()
           if (error) {
             console.error('Error fetching profile in initializeAuth:', error)
           }
               if (data) {
                 this.user.role = data.role
-                if (data.tenants) {
-                  this.user.storeName = (data.tenants as any).name
+                if (data.tenant_id) {
+                  const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', data.tenant_id).single()
+                  if (tenantData) {
+                    this.user.storeName = tenantData.name
+                  }
                 }
               }
             } else {
@@ -127,12 +138,15 @@ export const useAuthStore = defineStore('auth', {
             role: undefined,
             storeName: undefined
           }
-          // Fetch tenant name and role
-          const { data: profile } = await supabase.from('profiles').select('role, tenants(name)').eq('user_id', data.user.id).single()
+          // Fetch role first without JOIN
+          const { data: profile } = await supabase.from('profiles').select('role, tenant_id').eq('user_id', data.user.id).single()
           if (profile) {
             this.user.role = profile.role
-            if (profile.tenants) {
-              this.user.storeName = (profile.tenants as any).name
+            if (profile.tenant_id) {
+              const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', profile.tenant_id).single()
+              if (tenantData) {
+                this.user.storeName = tenantData.name
+              }
             }
           }
           return true
