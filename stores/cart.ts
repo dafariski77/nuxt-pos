@@ -64,7 +64,7 @@ export const useCartStore = defineStore('cart', {
       this.cartItems = []
     },
 
-    async checkout() {
+    async checkout(paymentMethod: 'cash' | 'qris' = 'cash') {
       if (this.cartItems.length === 0) return
 
       this.checkoutLoading = true
@@ -105,9 +105,30 @@ export const useCartStore = defineStore('cart', {
           return
         }
 
+        if (paymentMethod === 'qris') {
+          // Generate QRIS via Backend API
+          const { useAuthStore } = await import('./auth')
+          const authStore = useAuthStore()
+          
+          const response = await $fetch('/api/payments/qris', {
+            method: 'POST',
+            body: {
+              tenantId: authStore.user?.tenantId,
+              totalAmount: totalAmount + Math.round(totalAmount * 0.1), // Add 10% tax/service
+              items: itemsPayload
+            }
+          })
+          
+          this.checkoutLoading = false
+          return response // Contains qrString and transactionId
+        }
+
+        // Default: Cash Payment
         const { data, error } = await supabase.from('transactions').insert({
-          total_amount: totalAmount,
+          total_amount: totalAmount + Math.round(totalAmount * 0.1),
           items: itemsPayload,
+          payment_method: 'cash',
+          payment_status: 'paid'
         }).select()
 
         if (error) {
@@ -119,13 +140,14 @@ export const useCartStore = defineStore('cart', {
         const insertedTx = data?.[0]
         transactionsStore.saveLocalTransaction({
           id: insertedTx?.id || 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-          total_amount: totalAmount,
+          total_amount: totalAmount + Math.round(totalAmount * 0.1),
           items: itemsPayload,
           created_at: insertedTx?.created_at || new Date().toISOString()
         })
 
         this.checkoutSuccess = true
         this.clearCart()
+        return null
       } catch (error: any) {
         console.error('Checkout error:', error)
         this.errorMessage = error.message || 'Gagal memproses transaksi. Silakan coba lagi.'

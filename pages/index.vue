@@ -61,8 +61,39 @@
 
     <!-- Right: Cart sidebar -->
     <section class="w-[340px] xl:w-[380px] flex-shrink-0 h-full overflow-hidden border-l border-slate-800/60">
-      <CartSidebar @checkout-completed="handleCheckoutSuccess" />
+      <CartSidebar @checkout-completed="handleCheckoutSuccess('cash')" @qris-initiated="handleQrisInitiated" />
     </section>
+
+    <!-- QRIS Modal -->
+    <Transition name="fade">
+      <div v-if="showQrisModal && currentQrisData" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-8 text-center animate-[scaleUp_0.3s_ease-out]">
+          <h2 class="text-xl font-bold text-slate-100 mb-1">Scan untuk Membayar</h2>
+          <p class="text-xs text-slate-400 mb-6">Gunakan aplikasi e-Wallet atau Mobile Banking Anda</p>
+          
+          <div class="bg-white p-4 rounded-2xl mx-auto inline-block border-4 border-slate-800 mb-6">
+            <qrcode-vue :value="currentQrisData.qrString" :size="200" level="M" />
+          </div>
+          
+          <div class="bg-slate-950 rounded-xl p-4 mb-6 border border-slate-800/50">
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Tagihan</p>
+            <p class="text-2xl font-black text-brand-400">{{ formatRupiah(currentQrisData.amount) }}</p>
+          </div>
+          
+          <div class="flex items-center justify-center gap-2 text-xs font-semibold text-slate-400 mb-6 bg-slate-800/40 py-2 px-3 rounded-lg w-max mx-auto">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+            Menunggu pembayaran...
+          </div>
+          
+          <button
+            @click="cancelQris"
+            class="w-full bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white font-semibold py-3 px-4 rounded-xl transition-all"
+          >
+            Batal & Kembali
+          </button>
+        </div>
+      </div>
+    </Transition>
 
     <!-- Success Modal Overlay -->
     <Transition name="fade">
@@ -86,7 +117,7 @@
             </div>
             <div class="flex justify-between text-xs text-slate-400">
               <span>Metode Pembayaran</span>
-              <span class="font-medium text-slate-200">KASIR / TUNAI</span>
+              <span class="font-medium text-slate-200 uppercase">{{ receiptData.method === 'qris' ? 'QRIS / XENDIT' : 'KASIR / TUNAI' }}</span>
             </div>
             <div class="border-t border-slate-800/60 pt-2.5 flex justify-between text-sm">
               <span class="font-bold text-slate-300">Total Dibayar</span>
@@ -108,9 +139,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useCartStore } from '~/stores/cart'
 import type { Product } from '~/stores/cart'
+import QrcodeVue from 'qrcode.vue'
 
 const cartStore = useCartStore()
 
@@ -120,9 +152,12 @@ const productsLoading = ref(true)
 const searchQuery = ref('')
 const activeCategory = ref('Semua')
 const showSuccessModal = ref(false)
+const showQrisModal = ref(false)
+const currentQrisData = ref<any>(null)
+let realtimeChannel: any = null
 
 // Receipt Data for success modal
-const receiptData = ref({ amount: 0, time: '' })
+const receiptData = ref({ amount: 0, time: '', method: 'cash' })
 
 const categories = ref<any[]>([])
 
@@ -130,6 +165,11 @@ const categories = ref<any[]>([])
 const mockProducts: Product[] = []
 
 onMounted(() => { fetchProducts() })
+onUnmounted(() => {
+  if (realtimeChannel) {
+    useSupabaseClient().removeChannel(realtimeChannel)
+  }
+})
 
 // Fetch products from database
 const fetchProducts = async () => {
@@ -172,13 +212,48 @@ const filteredProducts = computed(() =>
 const formatRupiah = (v: number) =>
   new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(v)
 
-const handleCheckoutSuccess = () => {
-  const tax = Math.round(cartStore.totalAmount * 0.1)
+const handleCheckoutSuccess = (method: 'cash' | 'qris' = 'cash', total?: number) => {
+  const amount = total || (cartStore.totalAmount + Math.round(cartStore.totalAmount * 0.1))
   receiptData.value = {
-    amount: cartStore.totalAmount + tax,
-    time: new Intl.DateTimeFormat('id-ID', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date())
+    amount,
+    time: new Intl.DateTimeFormat('id-ID', { dateStyle: 'short', timeStyle: 'medium' }).format(new Date()),
+    method
   }
+  showQrisModal.value = false
   showSuccessModal.value = true
+}
+
+const handleQrisInitiated = (data: any) => {
+  currentQrisData.value = data
+  showQrisModal.value = true
+  
+  // Listen for realtime updates from Supabase
+  const supabase = useSupabaseClient()
+  realtimeChannel = supabase.channel(`transaction-${data.transactionId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'transactions',
+        filter: `id=eq.${data.transactionId}`
+      },
+      (payload) => {
+        if (payload.new.payment_status === 'paid') {
+          cartStore.clearCart() // Clear cart immediately
+          handleCheckoutSuccess('qris', data.amount)
+        }
+      }
+    )
+    .subscribe()
+}
+
+const cancelQris = () => {
+  showQrisModal.value = false
+  currentQrisData.value = null
+  if (realtimeChannel) {
+    useSupabaseClient().removeChannel(realtimeChannel)
+  }
 }
 
 const closeSuccessModal = () => {

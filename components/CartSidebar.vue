@@ -107,6 +107,31 @@
         </div>
       </div>
 
+      <!-- Payment Method Selector -->
+      <div class="space-y-1.5 pt-2 border-t border-slate-800/80">
+        <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Metode Pembayaran</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            @click="paymentMethod = 'cash'"
+            class="py-2 px-3 rounded-lg text-sm font-semibold border transition-all"
+            :class="paymentMethod === 'cash' ? 'bg-brand-500/10 border-brand-500 text-brand-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'"
+          >
+            Tunai / Cash
+          </button>
+          <button
+            @click="paymentMethod = 'qris'"
+            class="py-2 px-3 rounded-lg text-sm font-semibold border transition-all flex items-center justify-center gap-1.5"
+            :class="paymentMethod === 'qris' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
+            </svg>
+            QRIS
+          </button>
+        </div>
+      </div>
+
       <!-- Checkout Button -->
       <button
         @click="handleCheckout"
@@ -135,10 +160,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useCartStore } from '~/stores/cart'
 
 const cartStore = useCartStore()
+const paymentMethod = ref<'cash' | 'qris'>('cash')
 
 // Tax and Service calculations (10%)
 const taxAndService = computed(() => {
@@ -160,12 +186,17 @@ const formatRupiah = (value: number) => {
 
 const emit = defineEmits<{
   (e: 'checkout-completed'): void
+  (e: 'qris-initiated', data: any): void
 }>()
 
 // Handle triggering checkout
 const handleCheckout = async () => {
-  await cartStore.checkout()
-  if (cartStore.checkoutSuccess) {
+  const qrisData = await cartStore.checkout(paymentMethod.value)
+  
+  if (paymentMethod.value === 'qris' && qrisData) {
+    // Tell parent to show QRIS Modal
+    emit('qris-initiated', qrisData)
+  } else if (cartStore.checkoutSuccess) {
     emit('checkout-completed')
   }
 }
