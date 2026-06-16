@@ -41,8 +41,9 @@ export default defineEventHandler(async (event) => {
     const xenditResponse = await $fetch<any>('https://api.xendit.co/qr_codes', {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(xenditKey + ':').toString('base64')}`,
-        'Content-Type': 'application/json'
+        'Authorization': `Basic ${btoa(xenditKey + ':')}`,
+        'Content-Type': 'application/json',
+        'api-version': '2022-07-31'
       },
       body: {
         reference_id: trx.id,
@@ -66,7 +67,14 @@ export default defineEventHandler(async (event) => {
       expiresAt: xenditResponse.expires_at
     }
   } catch (error: any) {
-    console.error('Xendit Error:', error.data || error.message)
-    throw createError({ statusCode: 500, statusMessage: 'Gagal menghubungi Xendit (QRIS)' })
+    const xenditError = error.data || error.message
+    console.error('Xendit Error Details:', xenditError)
+    
+    // Create a detailed error response
+    throw createError({ 
+      statusCode: 500, 
+      statusMessage: 'Gagal menghubungi Xendit',
+      data: xenditError
+    })
   }
 })

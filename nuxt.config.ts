@@ -24,6 +24,7 @@ export default defineNuxtConfig({
     '@nuxtjs/supabase'
   ],
   supabase: {
+    types: '~/types/supabase.ts',
     redirectOptions: {
       login: '/login',
       callback: '/confirm',
