@@ -5,6 +5,7 @@ export interface UserSession {
   email: string
   role?: string
   storeName?: string
+  tenantId?: string
 }
 
 export const useAuthStore = defineStore('auth', {
@@ -44,7 +45,8 @@ export const useAuthStore = defineStore('auth', {
           this.user = {
             email: session.user.email || '',
             role: undefined,
-            storeName: undefined
+            storeName: undefined,
+            tenantId: undefined
           }
           // Fetch role first without JOIN
           const { data, error } = await supabase.from('profiles').select('role, tenant_id').eq('user_id', session.user.id).single()
@@ -54,6 +56,7 @@ export const useAuthStore = defineStore('auth', {
           if (data) {
             this.user.role = data.role
             if (data.tenant_id) {
+              this.user.tenantId = data.tenant_id
               // Fetch tenant separately
               const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', data.tenant_id).single()
               if (tenantData) {
@@ -73,7 +76,8 @@ export const useAuthStore = defineStore('auth', {
                 this.user = {
                   email: session.user.email || '',
                   role: undefined,
-                  storeName: undefined
+                  storeName: undefined,
+                  tenantId: undefined
                 }
               } else {
                 this.user.email = session.user.email || ''
@@ -85,6 +89,7 @@ export const useAuthStore = defineStore('auth', {
               if (data) {
                 this.user.role = data.role
                 if (data.tenant_id) {
+                  this.user.tenantId = data.tenant_id
                   const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', data.tenant_id).single()
                   if (tenantData) {
                     this.user.storeName = tenantData.name
@@ -136,13 +141,15 @@ export const useAuthStore = defineStore('auth', {
           this.user = { 
             email: data.user.email || '',
             role: undefined,
-            storeName: undefined
+            storeName: undefined,
+            tenantId: undefined
           }
           // Fetch role first without JOIN
           const { data: profile } = await supabase.from('profiles').select('role, tenant_id').eq('user_id', data.user.id).single()
           if (profile) {
             this.user.role = profile.role
             if (profile.tenant_id) {
+              this.user.tenantId = profile.tenant_id
               const { data: tenantData } = await supabase.from('tenants').select('name').eq('id', profile.tenant_id).single()
               if (tenantData) {
                 this.user.storeName = tenantData.name

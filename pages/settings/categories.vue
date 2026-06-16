@@ -117,9 +117,10 @@ import { ref, onMounted, computed } from 'vue'
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 
+const authStore = useAuthStore()
+
 const categories = ref<any[]>([])
 const loading = ref(true)
-const currentUserRole = ref('')
 
 const showModal = ref(false)
 const isEditing = ref(false)
@@ -130,20 +131,11 @@ const form = ref({
   name: ''
 })
 
-const isOwner = computed(() => currentUserRole.value === 'owner')
+const isOwner = computed(() => authStore.user?.role === 'owner')
 
 const fetchCategories = async () => {
   loading.value = true
   try {
-    // Get current user's role
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('user_id', user.value?.id)
-      .single()
-
-    if (profile) currentUserRole.value = profile.role
-
     // Fetch categories
     const { data } = await supabase
       .from('categories')

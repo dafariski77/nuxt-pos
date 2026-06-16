@@ -29,7 +29,7 @@
           v-for="item in navItems"
           :key="item.to"
           :to="item.to"
-          class="nav-item group"
+          class="nav-item group focus:outline-none focus-visible:outline-none"
           :class="{ 'justify-center': !sidebarOpen }"
           :title="!sidebarOpen ? item.label : ''"
         >
@@ -75,7 +75,7 @@
         <!-- Logout -->
         <button
           @click="handleLogout"
-          class="mt-2 w-full flex items-center gap-2.5 px-2 py-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-95"
+          class="mt-2 w-full flex items-center gap-2.5 px-2 py-2 rounded-xl text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all active:scale-95 focus:outline-none focus-visible:outline-none"
           :class="{ 'justify-center': !sidebarOpen }"
           title="Keluar"
         >

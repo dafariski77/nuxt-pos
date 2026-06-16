@@ -133,10 +133,10 @@ const supabase = useSupabaseClient()
 const user = useSupabaseUser()
 const currentUser = user
 
+const authStore = useAuthStore()
+
 const users = ref<any[]>([])
 const loading = ref(true)
-const tenantId = ref('')
-const currentUserRole = ref('')
 
 const showAddModal = ref(false)
 const formLoading = ref(false)
@@ -147,31 +147,21 @@ const form = ref({
   role: 'employee'
 })
 
-const isOwner = computed(() => currentUserRole.value === 'owner')
+const isOwner = computed(() => authStore.user?.role === 'owner')
 
 const fetchUsers = async () => {
+  if (!authStore.user?.tenantId) return
+
   loading.value = true
   try {
-    // Get current user's profile to know tenant_id and role
-    const { data: profile } = await supabase
+    // Fetch all users in this tenant
+    const { data } = await supabase
       .from('profiles')
-      .select('tenant_id, role')
-      .eq('user_id', currentUser.value?.id)
-      .single()
+      .select('*')
+      .eq('tenant_id', authStore.user.tenantId)
+      .order('created_at', { ascending: true })
 
-    if (profile) {
-      tenantId.value = profile.tenant_id
-      currentUserRole.value = profile.role
-
-      // Fetch all users in this tenant
-      const { data } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('tenant_id', profile.tenant_id)
-        .order('created_at', { ascending: true })
-
-      if (data) users.value = data
-    }
+    if (data) users.value = data
   } catch (error) {
     console.error('Error fetching users:', error)
   } finally {
@@ -189,7 +179,7 @@ const createUser = async () => {
         email: form.email,
         password: form.password,
         role: form.role,
-        tenantId: tenantId.value
+        tenantId: authStore.user?.tenantId
       }
     })
     
@@ -218,7 +208,9 @@ const deleteUser = async (id: string) => {
   }
 }
 
-onMounted(() => {
-  fetchUsers()
-})
+import { watch } from 'vue'
+
+watch(() => authStore.user?.tenantId, (newId) => {
+  if (newId) fetchUsers()
+}, { immediate: true })
 </script>
