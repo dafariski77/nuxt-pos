@@ -20,11 +20,11 @@ export const useSettingsStore = defineStore('settings', {
   actions: {
     async fetchSettings() {
       if (this.isLoaded) return
-      
+
       try {
         const supabase = useSupabaseClient()
         const config = useRuntimeConfig()
-        
+
         if (!config.public.supabase?.url) {
           this.isLoaded = true
           return
@@ -35,16 +35,34 @@ export const useSettingsStore = defineStore('settings', {
           .from('payment_methods_config')
           .select('*')
           .eq('is_active', true)
-          
+
         if (methods) this.paymentMethods = methods as PaymentMethodConfig[]
 
-        // Fetch tenant service_fee
-        const tenantData = await $fetch<{ service_fee: number }>('/api/settings/tenant').catch(() => null)
-        if (tenantData) this.tenantServiceFee = tenantData.service_fee
+        // Fetch tenant service_fee langsung dari client (tidak butuh API server)
+        // RLS memastikan user hanya bisa baca tenant-nya sendiri
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('tenant_id')
+            .eq('user_id', user.id)
+            .single()
+
+          if (profile?.tenant_id) {
+            const { data: tenant } = await supabase
+              .from('tenants')
+              .select('service_fee')
+              .eq('id', profile.tenant_id)
+              .single()
+
+            if (tenant) this.tenantServiceFee = tenant.service_fee ?? 10
+          }
+        }
 
         this.isLoaded = true
       } catch (err) {
         console.error('Failed to fetch settings:', err)
+        this.isLoaded = true  // tetap set agar tidak retry terus
       }
     }
   }
