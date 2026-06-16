@@ -13,6 +13,7 @@ export interface PaymentMethodConfig {
 export const useSettingsStore = defineStore('settings', {
   state: () => ({
     paymentMethods: [] as PaymentMethodConfig[],
+    tenantServiceFee: 10,  // Default 10%, diupdate dari DB
     isLoaded: false
   }),
 
@@ -29,17 +30,21 @@ export const useSettingsStore = defineStore('settings', {
           return
         }
 
-        const { data, error } = await supabase
+        // Fetch payment methods
+        const { data: methods } = await supabase
           .from('payment_methods_config')
           .select('*')
           .eq('is_active', true)
           
-        if (data && !error) {
-          this.paymentMethods = data as PaymentMethodConfig[]
-          this.isLoaded = true
-        }
+        if (methods) this.paymentMethods = methods as PaymentMethodConfig[]
+
+        // Fetch tenant service_fee
+        const tenantData = await $fetch<{ service_fee: number }>('/api/settings/tenant').catch(() => null)
+        if (tenantData) this.tenantServiceFee = tenantData.service_fee
+
+        this.isLoaded = true
       } catch (err) {
-        console.error('Failed to fetch payment methods config:', err)
+        console.error('Failed to fetch settings:', err)
       }
     }
   }

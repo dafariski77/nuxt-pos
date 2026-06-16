@@ -28,6 +28,15 @@ export default defineEventHandler(async (event) => {
 
   const tenantId = profile.tenant_id
 
+  // Ambil service_fee dari tenant
+  const { data: tenant } = await adminSupabase
+    .from('tenants')
+    .select('service_fee')
+    .eq('id', tenantId)
+    .single()
+
+  const serviceFeeRate = tenant?.service_fee ?? 10  // fallback 10%
+
   // 2. Validasi items dan hitung total dari harga di SERVER (database)
   if (!items || !Array.isArray(items) || items.length === 0) {
     throw createError({ statusCode: 400, statusMessage: 'Items tidak boleh kosong' })
@@ -67,8 +76,8 @@ export default defineEventHandler(async (event) => {
     .eq('is_active', true)
     .single()
 
-  // Hitung pajak 10%
-  const tax = Math.round(subtotal * 0.1)
+  // Hitung pajak dari tenant config
+  const tax = Math.round(subtotal * (serviceFeeRate / 100))
 
   // Hitung fee QRIS jika ada
   let paymentFee = 0

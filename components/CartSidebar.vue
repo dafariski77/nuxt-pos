@@ -98,7 +98,7 @@
           <span class="font-medium text-slate-200">{{ formatRupiah(cartStore.totalAmount) }}</span>
         </div>
         <div class="flex justify-between text-sm">
-          <span class="text-slate-400">Pajak & Layanan (10%)</span>
+          <span class="text-slate-400">Pajak & Layanan ({{ settingsStore.tenantServiceFee }}%)</span>
           <span class="font-medium text-slate-200">{{ formatRupiah(taxAndService) }}</span>
         </div>
         <div v-if="paymentFee > 0" class="flex justify-between text-sm">
@@ -171,9 +171,9 @@ const cartStore = useCartStore()
 const settingsStore = useSettingsStore()
 const paymentMethod = ref<string>('cash')
 
-// Tax and Service calculations (10%)
+// Tax and Service calculations (from tenant config)
 const taxAndService = computed(() => {
-  return Math.round(cartStore.totalAmount * 0.1)
+  return Math.round(cartStore.totalAmount * (settingsStore.tenantServiceFee / 100))
 })
 
 const paymentFee = computed(() => {

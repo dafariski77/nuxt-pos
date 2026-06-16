@@ -18,8 +18,10 @@ export const useTransactionsStore = defineStore('transactions', {
   state: () => ({
     transactionsList: [] as Transaction[],
     loading: false,
+    isFetching: false,   // guard concurrent fetch
     error: '',
     isSupabaseActive: false,
+    lastFetchedAt: 0,
   }),
 
   getters: {
@@ -42,10 +44,31 @@ export const useTransactionsStore = defineStore('transactions', {
   },
 
   actions: {
-    async fetchTransactions() {
+    async fetchTransactions(forceRefresh = false) {
+      // Guard: jangan jalankan 2 fetch bersamaan
+      if (this.isFetching) return
+
+      // Cache: skip jika data fresh & tidak diminta refresh
+      const now = Date.now()
+      if (!forceRefresh && this.lastFetchedAt > 0 && (now - this.lastFetchedAt) < 60_000) {
+        return
+      }
+
+      this.isFetching = true
       this.loading = true
       this.error = ''
-      
+
+      // Timeout 10 detik
+      const timeoutId = setTimeout(() => {
+        if (this.isFetching) {
+          console.warn('[Reports] Fetch timeout, falling back to local')
+          this.loadLocalTransactions()
+          this.isSupabaseActive = false
+          this.loading = false
+          this.isFetching = false
+        }
+      }, 10_000)
+
       try {
         const config = useRuntimeConfig()
         const isSupabaseConfigured = config.public.supabase?.url && config.public.supabase?.key
@@ -59,19 +82,24 @@ export const useTransactionsStore = defineStore('transactions', {
         const supabase = useSupabaseClient()
         const { data, error } = await supabase
           .from('transactions')
-          .select('*')
+          .select('id, total_amount, items, created_at, payment_method, payment_status')
           .order('created_at', { ascending: false })
+          .limit(100)
 
         if (error) throw error
 
         this.transactionsList = data || []
         this.isSupabaseActive = true
+        this.lastFetchedAt = Date.now()
       } catch (err: any) {
-        console.error('Failed to fetch transactions from Supabase, loading local:', err)
+        console.error('[Reports] Fetch failed, loading local:', err.message)
+        this.error = err.message || 'Gagal memuat transaksi'
         this.loadLocalTransactions()
         this.isSupabaseActive = false
       } finally {
+        clearTimeout(timeoutId)
         this.loading = false
+        this.isFetching = false
       }
     },
 

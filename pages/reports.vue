@@ -4,6 +4,26 @@
     <div v-if="transactionsStore.loading" class="flex flex-col items-center justify-center h-64">
       <span class="w-10 h-10 border-3 border-brand-500/20 border-t-brand-500 rounded-full animate-spin"></span>
       <span class="text-sm font-semibold text-slate-400 mt-4">Memuat data transaksi...</span>
+      <span class="text-xs text-slate-600 mt-1">Mohon tunggu, maksimal 10 detik</span>
+    </div>
+
+    <!-- Error State -->
+    <div v-else-if="transactionsStore.error && !transactionsStore.isSupabaseActive" class="flex flex-col items-center justify-center h-64 gap-4">
+      <div class="w-12 h-12 rounded-2xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9 3.75h.008v.008H12v-.008Z" />
+        </svg>
+      </div>
+      <div class="text-center">
+        <p class="text-sm font-bold text-slate-300">Gagal memuat data</p>
+        <p class="text-xs text-slate-500 mt-1">{{ transactionsStore.error }}</p>
+      </div>
+      <button
+        @click="transactionsStore.fetchTransactions(true)"
+        class="px-5 py-2 rounded-xl bg-brand-500 hover:bg-brand-600 text-white text-sm font-semibold transition-all active:scale-95"
+      >
+        Coba Lagi
+      </button>
     </div>
 
     <div v-else class="space-y-6">
@@ -79,6 +99,19 @@
           class="text-xs text-red-400 hover:text-white border border-red-500/20 hover:bg-red-600 px-4 py-2.5 rounded-xl transition-all font-semibold active:scale-95 w-full sm:w-auto"
         >
           Hapus Riwayat Lokal
+        </button>
+
+        <!-- Refresh button -->
+        <button
+          v-if="transactionsStore.isSupabaseActive"
+          @click="transactionsStore.fetchTransactions(true)"
+          :disabled="transactionsStore.loading"
+          class="text-xs text-slate-400 hover:text-white border border-slate-700 hover:border-slate-600 hover:bg-slate-800 px-4 py-2.5 rounded-xl transition-all font-semibold active:scale-95 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5" :class="transactionsStore.loading ? 'animate-spin' : ''">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0 3.181 3.183a8.25 8.25 0 0 0 13.803-3.7M4.031 9.865a8.25 8.25 0 0 1 13.803-3.7l3.181 3.182m0-4.991v4.99" />
+          </svg>
+          Perbarui Data
         </button>
       </div>
 
