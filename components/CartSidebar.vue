@@ -101,6 +101,10 @@
           <span class="text-slate-400">Pajak & Layanan (10%)</span>
           <span class="font-medium text-slate-200">{{ formatRupiah(taxAndService) }}</span>
         </div>
+        <div v-if="paymentFee > 0" class="flex justify-between text-sm">
+          <span class="text-slate-400">Biaya Metode Pembayaran</span>
+          <span class="font-medium text-red-400">+ {{ formatRupiah(paymentFee) }}</span>
+        </div>
         <div class="flex justify-between border-t border-slate-800/80 pt-3">
           <span class="text-sm font-bold text-slate-200">Total Tagihan</span>
           <span class="text-base font-extrabold text-brand-400">{{ formatRupiah(grandTotal) }}</span>
@@ -110,24 +114,23 @@
       <!-- Payment Method Selector -->
       <div class="space-y-1.5 pt-2 border-t border-slate-800/80">
         <label class="text-xs font-bold text-slate-400 uppercase tracking-wider">Metode Pembayaran</label>
-        <div class="grid grid-cols-2 gap-2">
+        
+        <!-- Skeleton while loading -->
+        <div v-if="!settingsStore.isLoaded" class="grid grid-cols-2 gap-2">
+          <div class="h-9 rounded-lg bg-slate-800 animate-pulse"></div>
+          <div class="h-9 rounded-lg bg-slate-800 animate-pulse"></div>
+        </div>
+        
+        <!-- Actual payment methods -->
+        <div v-else class="grid grid-cols-2 gap-2">
           <button
-            @click="paymentMethod = 'cash'"
-            class="py-2 px-3 rounded-lg text-sm font-semibold border transition-all"
-            :class="paymentMethod === 'cash' ? 'bg-brand-500/10 border-brand-500 text-brand-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'"
-          >
-            Tunai / Cash
-          </button>
-          <button
-            @click="paymentMethod = 'qris'"
+            v-for="method in settingsStore.paymentMethods"
+            :key="method.code"
+            @click="paymentMethod = method.code"
             class="py-2 px-3 rounded-lg text-sm font-semibold border transition-all flex items-center justify-center gap-1.5"
-            :class="paymentMethod === 'qris' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'"
+            :class="paymentMethod === method.code ? (method.code === 'qris' ? 'bg-sky-500/10 border-sky-500 text-sky-400' : 'bg-brand-500/10 border-brand-500 text-brand-400') : 'bg-slate-900 border-slate-800 text-slate-400 hover:border-slate-700'"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 3.75 9.375v-4.5ZM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 0 1-1.125-1.125v-4.5ZM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0 1 13.5 9.375v-4.5Z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 6.75h.75v.75h-.75v-.75ZM6.75 16.5h.75v.75h-.75v-.75ZM16.5 6.75h.75v.75h-.75v-.75ZM13.5 13.5h.75v.75h-.75v-.75ZM13.5 19.5h.75v.75h-.75v-.75ZM19.5 13.5h.75v.75h-.75v-.75ZM19.5 19.5h.75v.75h-.75v-.75ZM16.5 16.5h.75v.75h-.75v-.75Z" />
-            </svg>
-            QRIS
+            {{ method.name }}
           </button>
         </div>
       </div>
@@ -162,17 +165,33 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useCartStore } from '~/stores/cart'
+import { useSettingsStore } from '~/stores/settings'
 
 const cartStore = useCartStore()
-const paymentMethod = ref<'cash' | 'qris'>('cash')
+const settingsStore = useSettingsStore()
+const paymentMethod = ref<string>('cash')
 
 // Tax and Service calculations (10%)
 const taxAndService = computed(() => {
   return Math.round(cartStore.totalAmount * 0.1)
 })
 
+const paymentFee = computed(() => {
+  const method = settingsStore.paymentMethods.find(m => m.code === paymentMethod.value)
+  if (!method) return 0
+  
+  if (method.fee_type === 'percentage') {
+    // Percentage calculated from (Subtotal + Tax)
+    const baseAmount = cartStore.totalAmount + taxAndService.value
+    return Math.round(baseAmount * (method.fee_amount / 100))
+  } else {
+    // Fixed fee
+    return method.fee_amount
+  }
+})
+
 const grandTotal = computed(() => {
-  return cartStore.totalAmount + taxAndService.value
+  return cartStore.totalAmount + taxAndService.value + paymentFee.value
 })
 
 // Format money to IDR
@@ -191,7 +210,10 @@ const emit = defineEmits<{
 
 // Handle triggering checkout
 const handleCheckout = async () => {
-  const qrisData = await cartStore.checkout(paymentMethod.value)
+  const methodObj = settingsStore.paymentMethods.find(m => m.code === paymentMethod.value)
+  if (!methodObj) return
+  
+  const qrisData = await cartStore.checkout(paymentMethod.value, grandTotal.value)
   
   if (paymentMethod.value === 'qris' && qrisData) {
     // Tell parent to show QRIS Modal

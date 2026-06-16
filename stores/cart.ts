@@ -64,19 +64,25 @@ export const useCartStore = defineStore('cart', {
       this.cartItems = []
     },
 
-    async checkout(paymentMethod: 'cash' | 'qris' = 'cash') {
+    async checkout(paymentMethod: string = 'cash', passedTotalAmount?: number) {
       if (this.cartItems.length === 0) return
 
       this.checkoutLoading = true
       this.checkoutSuccess = false
       this.errorMessage = ''
 
-      const totalAmount = this.totalAmount
+      const totalAmount = passedTotalAmount !== undefined ? passedTotalAmount : this.totalAmount + Math.round(this.totalAmount * 0.1)
+      // Payload lengkap untuk disimpan ke DB (cash payment)
       const itemsPayload = this.cartItems.map((item) => ({
         id: item.product.id,
         name: item.product.name,
         qty: item.qty,
         price: item.product.price,
+      }))
+      // Payload minimal untuk QRIS API — server akan query harga sendiri dari DB
+      const qrisItemsPayload = this.cartItems.map((item) => ({
+        id: item.product.id,
+        qty: item.qty,
       }))
 
       try {
@@ -107,15 +113,12 @@ export const useCartStore = defineStore('cart', {
 
         if (paymentMethod === 'qris') {
           // Generate QRIS via Backend API
-          const { useAuthStore } = await import('./auth')
-          const authStore = useAuthStore()
-          
+          // Keamanan: client hanya mengirim items (tanpa harga & amount)
+          // Server akan query harga dari DB dan hitung total sendiri
           const response = await $fetch('/api/payments/qris', {
             method: 'POST',
             body: {
-              tenantId: authStore.user?.tenantId,
-              totalAmount: totalAmount + Math.round(totalAmount * 0.1), // Add 10% tax/service
-              items: itemsPayload
+              items: qrisItemsPayload   // Hanya id + quantity, TIDAK ada price/amount
             }
           })
           
@@ -125,7 +128,7 @@ export const useCartStore = defineStore('cart', {
 
         // Default: Cash Payment
         const { data, error } = await supabase.from('transactions').insert({
-          total_amount: totalAmount + Math.round(totalAmount * 0.1),
+          total_amount: totalAmount,
           items: itemsPayload,
           payment_method: 'cash',
           payment_status: 'paid'
@@ -140,7 +143,7 @@ export const useCartStore = defineStore('cart', {
         const insertedTx = data?.[0]
         transactionsStore.saveLocalTransaction({
           id: insertedTx?.id || 'TX-' + Math.random().toString(36).substring(2, 9).toUpperCase(),
-          total_amount: totalAmount + Math.round(totalAmount * 0.1),
+          total_amount: totalAmount,
           items: itemsPayload,
           created_at: insertedTx?.created_at || new Date().toISOString()
         })

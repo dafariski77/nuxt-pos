@@ -128,8 +128,10 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useAuthStore } from '~/stores/auth'
+import { useSettingsStore } from '~/stores/settings'
 
 const authStore = useAuthStore()
+const settingsStore = useSettingsStore()
 const route = useRoute()
 
 const sidebarOpen = ref(true)
@@ -141,6 +143,8 @@ onMounted(() => {
   timer = setInterval(() => {
     currentTime.value = new Date()
   }, 1000)
+  // Load payment methods config from DB
+  settingsStore.fetchSettings()
 })
 onUnmounted(() => {
   if (timer) clearInterval(timer)

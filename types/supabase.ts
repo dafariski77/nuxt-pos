@@ -68,6 +68,60 @@ export type Database = {
           },
         ]
       }
+      global_settings: {
+        Row: {
+          id: number
+          qris_mdr_rate: number
+          service_charge_rate: number
+          tax_rate: number
+        }
+        Insert: {
+          id?: number
+          qris_mdr_rate?: number
+          service_charge_rate?: number
+          tax_rate?: number
+        }
+        Update: {
+          id?: number
+          qris_mdr_rate?: number
+          service_charge_rate?: number
+          tax_rate?: number
+        }
+        Relationships: []
+      }
+      payment_methods_config: {
+        Row: {
+          code: string
+          created_at: string | null
+          fee_amount: number
+          fee_type: string
+          id: string
+          is_active: boolean
+          name: string
+          provider: string | null
+        }
+        Insert: {
+          code: string
+          created_at?: string | null
+          fee_amount?: number
+          fee_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          provider?: string | null
+        }
+        Update: {
+          code?: string
+          created_at?: string | null
+          fee_amount?: number
+          fee_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          provider?: string | null
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           category_id: string
